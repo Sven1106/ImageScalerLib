@@ -11,71 +11,36 @@ using SixLabors.ImageSharp.Formats;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Threading.Tasks;
-using KVPLiteLib;
+using KVPLite;
 
 namespace ImageScalerLib
 {
     public class ImageService
     {
-        private readonly KVPLite _KVPLite;
+        private readonly Database database;
         public ImageService()
         {
-            _KVPLite = new KVPLite();
+            database = new Database();
         }
-        public async Task<string> GetOrSetScaledImageAsync(string src, int width, int height)
+        public async Task<string> SetAndGetImageAsBase64Async(string src, int width = 0, int height = 0) // TODO Find a better name
         {
-            string key = src + "&width=" + width + "&height=" + height;
-
-            KeyValuePair<string, string> keyValuePair = _KVPLite.GetKvp(key);
-            if (keyValuePair.Equals(default(KeyValuePair<string, string>)))
+            string compositeKey = CreateCompositeKey(src, width, height);
+            KeyValuePair<string, string> base64ByCompositeKeyPair = database.GetKvp(compositeKey);
+            if (base64ByCompositeKeyPair.Equals(default(KeyValuePair<string, string>)))
             {
                 string outBase64 = "";
-                var base64Match = Regex.Match(src, @"data:(?<type>.+?);base64,(?<data>.+)");
-                if (base64Match.Success)
+                var base64Matcher = Regex.Match(src, @"data:(?<type>.+?);base64,(?<data>.+)");
+                if (base64Matcher.Success)
                 {
-
-                    var base64Data = base64Match.Groups["data"].Value;
-                    var contentType = base64Match.Groups["type"].Value;
-                    var binData = Convert.FromBase64String(base64Data);
-                    using (Image<Rgba32> image = Image.Load<Rgba32>(binData, out IImageFormat format))
+                    string inBase64 = base64Matcher.Groups["data"].Value;
+                    byte[] dataAsBytes = Convert.FromBase64String(inBase64);
+                    if (Image.DetectFormat(dataAsBytes) == null)
                     {
-
-                        int newHeight;
-                        int newWidth;
-
-                        if (width == 0 && height == 0)
-                        {
-                            newHeight = image.Height;
-                            newWidth = image.Width;
-                        }
-                        else
-                        {
-                            if (width == 0)
-                            {
-                                newWidth = (int)(height / (double)image.Height * image.Width);
-                            }
-                            else
-                            {
-                                newWidth = width;
-                            }
-                            if (height == 0)
-                            {
-                                newHeight = (int)(width / (double)image.Width * image.Height);
-                            }
-                            else
-                            {
-                                newHeight = height;
-                            }
-                        }
-                        image.Mutate(x =>
-                        {
-                            x.Resize(new ResizeOptions
-                            {
-                                Size = new Size(width, newHeight),
-                                Mode = ResizeMode.Crop
-                            });
-                        });
-                        outBase64 = image.ToBase64String(format); // Automatic encoder selected based on extension.
+                        // TODO Handle exception
+                    }
+                    else
+                    {
+                        outBase64 = CreateModifiedImage(dataAsBytes, width, height);
                     }
                 }
                 else
@@ -86,47 +51,10 @@ namespace ImageScalerLib
                         try
                         {
                             using (Stream stream = await webClient.OpenReadTaskAsync(srcDecoded))
+                            using (MemoryStream ms = new MemoryStream())
                             {
-                                using (Image<Rgba32> image = Image.Load<Rgba32>(stream, out IImageFormat format))
-                                {
-
-                                    int newHeight;
-                                    int newWidth;
-
-                                    if (width == 0 && height == 0)
-                                    {
-                                        newHeight = image.Height;
-                                        newWidth = image.Width;
-                                    }
-                                    else
-                                    {
-                                        if (width == 0)
-                                        {
-                                            newWidth = (int)(height / (double)image.Height * image.Width);
-                                        }
-                                        else
-                                        {
-                                            newWidth = width;
-                                        }
-                                        if (height == 0)
-                                        {
-                                            newHeight = (int)(width / (double)image.Width * image.Height);
-                                        }
-                                        else
-                                        {
-                                            newHeight = height;
-                                        }
-                                    }
-                                    image.Mutate(x =>
-                                    {
-                                        x.Resize(new ResizeOptions
-                                        {
-                                            Size = new Size(width, newHeight),
-                                            Mode = ResizeMode.Crop
-                                        });
-                                    });
-                                    outBase64 = image.ToBase64String(format); // Automatic encoder selected based on extension.
-                                }
+                                await stream.CopyToAsync(ms);
+                                outBase64 = CreateModifiedImage(ms.ToArray(), width, height);
                             }
                         }
                         catch (Exception)
@@ -140,16 +68,75 @@ namespace ImageScalerLib
                         }
                     }
                 }
-
-                keyValuePair = new KeyValuePair<string, string>(key, outBase64);
-                _KVPLite.SetKvp(keyValuePair);
+                base64ByCompositeKeyPair = new KeyValuePair<string, string>(compositeKey, outBase64);
+                database.SetKvp(base64ByCompositeKeyPair);
             }
-            return keyValuePair.Value;
+            return base64ByCompositeKeyPair.Value;
+        }
+
+        private static string CreateCompositeKey(string src, int width, int height)
+        {
+            string compositeKey = src;
+            if (width != 0)
+            {
+                compositeKey += "&width=" + width;
+            }
+            if (height != 0)
+            {
+                compositeKey += "&height=" + height;
+            }
+
+            return compositeKey;
+        }
+
+        private static string CreateModifiedImage(byte[] data, int width, int height)
+        {
+            string outBase64 = "";
+            using (Image<Rgba32> image = Image.Load<Rgba32>(data, out IImageFormat format))
+            {
+                int newHeight;
+                int newWidth;
+
+                if (width == 0 && height == 0)
+                {
+                    newHeight = image.Height;
+                    newWidth = image.Width;
+                }
+                else
+                {
+                    if (width == 0)
+                    {
+                        newWidth = (int)(height / (double)image.Height * image.Width);
+                    }
+                    else
+                    {
+                        newWidth = width;
+                    }
+                    if (height == 0)
+                    {
+                        newHeight = (int)(width / (double)image.Width * image.Height);
+                    }
+                    else
+                    {
+                        newHeight = height;
+                    }
+                }
+                image.Mutate(x =>
+                {
+                    x.Resize(new ResizeOptions
+                    {
+                        Size = new Size(width, newHeight),
+                        Mode = ResizeMode.Crop
+                    });
+                });
+                outBase64 = image.ToBase64String(format); // Automatically encodes image to the format derived from base64Data.
+            }
+            return outBase64;
         }
 
         public static string CreatePlaceholderImage(int width, int height)
         {
-            string base64;
+            string base64 = "";
             using (var image = new Image<Rgba32>(Configuration.Default, width, height, Rgba32.LightGray))
             {
                 int padding = 15;
@@ -167,28 +154,20 @@ namespace ImageScalerLib
                 image.Mutate(x => x.DrawText(textGraphicsOptions, text, scaledFont, Color.DarkGray, new PointF(image.Width / 2, image.Height / 2)));
                 base64 = image.ToBase64String(JpegFormat.Instance);
             }
-
             return base64;
         }
 
-        public bool DeleteImage(string src, int width, int height)
+        public bool DeleteImage(string src, int width = 0, int height = 0)
         {
-            string key = src + "&width=" + width + "&height=" + height;
-            bool imageDeleted = _KVPLite.RemoveKvp(key);
+            string compositeKey = CreateCompositeKey(src, width, height);
+            bool imageDeleted = database.RemoveKvp(compositeKey);
             return imageDeleted;
         }
         public bool DeleteAllImages()
         {
-            bool imagesDeleted = _KVPLite.RemoveAllKvp();
+            bool imagesDeleted = database.RemoveAllKvp();
             return imagesDeleted;
         }
 
-        public bool IsBase64String(string s)
-        {
-            s = s.Trim();
-            return (s.Length % 4 == 0) && Regex.IsMatch(s, @"^[a-zA-Z0-9\+/]*={0,3}$", RegexOptions.None);
-
-        }
-        private static readonly Regex DataUriPattern = new Regex(@"^data\:(?<type>image\/(png|tiff|jpg|gif));base64,(?<data>[A-Z0-9\+\/\=]+)$", RegexOptions.Compiled | RegexOptions.ExplicitCapture | RegexOptions.IgnoreCase);
     }
 }

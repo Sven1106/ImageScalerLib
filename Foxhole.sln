@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29806.167
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Foxhole.Tests", "Foxhole.Tests\Foxhole.Tests.csproj", "{179A3070-67FF-455D-AE33-CAB8F42243C1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Foxhole", "Foxhole\Foxhole.csproj", "{3C6E9E1B-8DAE-4D42-B577-08250138551A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{179A3070-67FF-455D-AE33-CAB8F42243C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{179A3070-67FF-455D-AE33-CAB8F42243C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{179A3070-67FF-455D-AE33-CAB8F42243C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{179A3070-67FF-455D-AE33-CAB8F42243C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C6E9E1B-8DAE-4D42-B577-08250138551A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C6E9E1B-8DAE-4D42-B577-08250138551A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C6E9E1B-8DAE-4D42-B577-08250138551A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C6E9E1B-8DAE-4D42-B577-08250138551A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7A22A699-AB9E-44D2-B09E-69CE7FF3C1A1}
+	EndGlobalSection
+EndGlobal

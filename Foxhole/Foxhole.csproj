@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Foxhole</AssemblyName>
+    <RootNamespace>Foxhole</RootNamespace>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Description>A caching library.</Description>
+    <Authors>Svend Roperos</Authors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="KVPLite" Version="1.0.2" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta0007" />
+  </ItemGroup>
+
+</Project>
